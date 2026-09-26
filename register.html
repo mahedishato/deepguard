@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create account · DeepGuard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="app.js"></script>
+  <script>App.Auth.redirectIfLoggedIn();</script>
+</head>
+<body data-page="register">
+  <div class="auth-layout">
+    <aside class="auth-side">
+      <a class="brand" href="index.html">
+        <span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 5 3.4 8.4 8 9 4.6-.6 8-4 8-9V6l-8-3z"/><path d="M9 12l2 2 4-4"/></svg></span>
+        <span>DeepGuard</span>
+      </a>
+      <div>
+        <h2>Create an account to start verifying images.</h2>
+        <p>Built for researchers, journalists, and moderators who need a verdict they can inspect rather than a black-box score.</p>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span>Three architectures compared under one protocol: ViT-B/16, dual-branch spatial-frequency ViT, Xception</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span>Identity-disjoint evaluation on 224,534 face crops</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span>Cross-dataset generalization and faithfulness reported honestly</span></li>
+        </ul>
+      </div>
+      <p class="foot">Thesis research prototype &middot; no personal data leaves your browser in the demo build</p>
+    </aside>
+
+    <main class="auth-main">
+      <div class="auth-card">
+        <a class="brand auth-mobile-brand" href="index.html">
+          <span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 5 3.4 8.4 8 9 4.6-.6 8-4 8-9V6l-8-3z"/><path d="M9 12l2 2 4-4"/></svg></span>
+          <span>DeepGuard</span>
+        </a>
+        <h1>Create your account</h1>
+        <p class="sub">It takes less than a minute.</p>
+
+        <form class="auth-form" id="register-form" novalidate>
+          <div class="field">
+            <label for="fullname">Full name</label>
+            <input class="input" id="fullname" type="text" autocomplete="name" placeholder="Jane Doe" required />
+            <span class="field-error" id="fullname-error" hidden>Enter your name.</span>
+          </div>
+          <div class="field">
+            <label for="email">Email</label>
+            <input class="input" id="email" type="email" autocomplete="email" placeholder="you@example.com" required />
+            <span class="field-error" id="email-error" hidden>Enter a valid email address.</span>
+          </div>
+          <div class="field">
+            <label for="password">Password</label>
+            <div class="input-wrap">
+              <input class="input" id="password" type="password" autocomplete="new-password" placeholder="At least 8 characters" required />
+              <button type="button" class="toggle-pw" data-toggle="password" aria-label="Show password">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+            <div class="meter" style="margin-top:6px"><i id="pw-meter" style="width:0"></i></div>
+            <span class="hint" id="pw-hint">Use 8+ characters with a mix of letters and numbers.</span>
+            <span class="field-error" id="password-error" hidden>Password must be at least 8 characters.</span>
+          </div>
+          <div class="field">
+            <label for="confirm">Confirm password</label>
+            <input class="input" id="confirm" type="password" autocomplete="new-password" placeholder="Repeat your password" required />
+            <span class="field-error" id="confirm-error" hidden>Passwords do not match.</span>
+          </div>
+          <label class="checkbox"><input type="checkbox" id="terms" required /> <span>I understand this is a research prototype and results are not legal evidence.</span></label>
+          <span class="field-error" id="terms-error" hidden>Please acknowledge the notice above.</span>
+          <button class="btn btn-primary btn-lg btn-block" type="submit" id="register-btn">Create account</button>
+        </form>
+
+        <p class="auth-alt">Already have an account? <a href="login.html">Sign in</a></p>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      const $ = (id) => document.getElementById(id);
+      const form = $("register-form");
+      const pw = $("password");
+      const meter = $("pw-meter");
+      const hint = $("pw-hint");
+
+      document.querySelector("[data-toggle=password]").addEventListener("click", function () {
+        pw.type = pw.type === "password" ? "text" : "password";
+      });
+
+      pw.addEventListener("input", function () {
+        const v = pw.value;
+        let score = 0;
+        if (v.length >= 8) score++;
+        if (/[A-Z]/.test(v) && /[a-z]/.test(v)) score++;
+        if (/\d/.test(v)) score++;
+        if (/[^A-Za-z0-9]/.test(v)) score++;
+        const pct = [0, 25, 50, 75, 100][score];
+        meter.style.width = pct + "%";
+        meter.style.background = score <= 1 ? "var(--destructive)" : score === 2 ? "var(--warning)" : "var(--success)";
+        hint.textContent = v.length === 0 ? "Use 8+ characters with a mix of letters and numbers." :
+          ["Too short", "Weak", "Fair", "Good", "Strong"][score] + " password";
+      });
+
+      function setErr(input, errId, ok) {
+        if (input) input.classList.toggle("invalid", !ok);
+        $(errId).hidden = ok;
+        return ok;
+      }
+
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        const checks = [
+          setErr($("fullname"), "fullname-error", $("fullname").value.trim().length > 0),
+          setErr($("email"), "email-error", /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test($("email").value.trim())),
+          setErr(pw, "password-error", pw.value.length >= 8),
+          setErr($("confirm"), "confirm-error", $("confirm").value === pw.value && pw.value.length > 0),
+          setErr(null, "terms-error", $("terms").checked),
+        ];
+        if (!checks.every(Boolean)) return;
+        const btn = $("register-btn");
+        btn.disabled = true;
+        btn.textContent = "Creating account…";
+        setTimeout(function () {
+          App.Auth.register($("fullname").value.trim(), $("email").value.trim());
+          window.location.href = "detect.html";
+        }, 600);
+      });
+    })();
+  </script>
+</body>
+</html>

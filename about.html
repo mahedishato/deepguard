@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About · DeepGuard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="app.js"></script>
+</head>
+<body data-page="about">
+  <header id="site-nav"></header>
+
+  <main>
+    <section class="page-header">
+      <div class="container">
+        <span class="eyebrow">About the project</span>
+        <h1>Explainable Deepfake Detection with Vision Transformers</h1>
+        <p class="lede">A thesis project that builds a real/fake facial image classifier, explains each decision with attention rollout, and measures how well the detector holds up when the manipulation method changes.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container two-col">
+        <nav class="toc" aria-label="On this page">
+          <a href="#problem">The problem</a>
+          <a href="#how-it-works">How it works</a>
+          <a href="#architecture">Architecture</a>
+          <a href="#data">Datasets</a>
+          <a href="#explainability">Explainability</a>
+          <a href="#custom">Custom dataset</a>
+          <a href="#limitations">Limitations</a>
+          <a href="#stack">Technology</a>
+        </nav>
+
+        <div class="stack" style="gap:56px">
+          <div class="prose" id="problem">
+            <h2>The problem</h2>
+            <p>Face manipulation tools have become cheap and convincing enough that synthetic images now appear in impersonation scams, fabricated evidence, and disinformation. Most published detectors are benchmarked on a single dataset and degrade sharply when the manipulation method, compression level, or source changes. They also return a bare score, which gives a reviewer nothing to verify.</p>
+            <p>This project addresses both gaps. It reports in-domain accuracy alongside a strict cross-dataset generalization test, and every prediction is accompanied by an attention map whose usefulness is measured with a quantitative faithfulness metric rather than assumed.</p>
+          </div>
+
+          <div id="how-it-works">
+            <h2>How it works</h2>
+            <p class="text-muted mb-24">The deployed service runs the same pipeline as the research notebooks, end to end.</p>
+            <ul class="timeline">
+              <li><b>1. Upload and validation</b><p>The API accepts JPEG or PNG uploads only. Other content types are rejected before any processing.</p></li>
+              <li><b>2. Face detection and crop</b><p>MTCNN locates the largest face, crops it with a 20 px margin, and resizes it to 224 × 224. The same recipe produced every training crop, so the model never sees backgrounds or file-format shortcuts.</p></li>
+              <li><b>3. Normalization</b><p>The crop is converted to a tensor and normalized with ImageNet mean and standard deviation.</p></li>
+              <li><b>4. Classification</b><p>A fine-tuned ViT-B/16 produces two logits. Softmax gives the label and confidence. The dual-branch variant adds a frequency branch over the FFT spectrum before the classifier.</p></li>
+              <li><b>5. Attention rollout</b><p>Attention matrices from all 12 layers are combined to trace the class token back to the input patches. The heatmap is overlaid on the face crop and returned with the verdict.</p></li>
+            </ul>
+            <figure class="figure mt-32">
+              <img src="assets/diagram_pipeline_overview.png" alt="Experiment pipeline overview diagram" loading="lazy" />
+              <figcaption>Experiment pipeline: one shared data stage feeding the model comparison, the cross-dataset ablation, and the explainability evaluation.</figcaption>
+            </figure>
+          </div>
+
+          <div id="architecture">
+            <h2>Architecture</h2>
+            <p class="text-muted mb-24">Three architectures were trained under an identical protocol so they can be compared directly.</p>
+            <div class="grid grid-3 mb-24">
+              <div class="card feature">
+                <span class="badge badge-neutral mb-16">Baseline</span>
+                <h3>ViT-B/16</h3>
+                <p>ImageNet-21k pretrained transformer. 16 × 16 patches, 768-dim tokens, 12 layers, 12 heads, 85.8M parameters. Fine-tuned end to end.</p>
+              </div>
+              <div class="card feature" style="border-color:#bfdbfe; background:var(--primary-soft)">
+                <span class="badge badge-primary mb-16">Contribution</span>
+                <h3>Dual-branch spatial-frequency ViT</h3>
+                <p>The ViT class embedding is concatenated with a 256-dim embedding from a small CNN over the log-magnitude FFT spectrum, then classified. 86.45M parameters.</p>
+              </div>
+              <div class="card feature">
+                <span class="badge badge-neutral mb-16">Reference</span>
+                <h3>Xception</h3>
+                <p>The CNN used in the original FaceForensics++ benchmark. 20.8M parameters, trained with the same data, transforms, and epoch budget.</p>
+              </div>
+            </div>
+            <figure class="figure">
+              <img src="assets/diagram_dualbranch_architecture.png" alt="Dual-branch spatial-frequency ViT architecture diagram" loading="lazy" />
+              <figcaption>Dual-branch architecture: the spatial ViT branch and the frequency CNN branch are fused before the classifier. Only the spatial branch participates in attention rollout.</figcaption>
+            </figure>
+          </div>
+
+          <div id="data">
+            <h2>Datasets</h2>
+            <div class="table-wrap mb-16">
+              <table class="table">
+                <thead><tr><th>Dataset</th><th class="num">Face crops</th><th class="num">Real</th><th class="num">Fake</th><th>Notes</th></tr></thead>
+                <tbody>
+                  <tr><td>FaceForensics++ (c23)</td><td class="num">138,568</td><td class="num">19,196</td><td class="num">119,372</td><td>6 manipulation methods</td></tr>
+                  <tr><td>Celeb-DF-v2</td><td class="num">85,966</td><td class="num">12,404</td><td class="num">73,562</td><td>High-quality celebrity face swaps</td></tr>
+                  <tr class="highlight"><td><b>Combined</b></td><td class="num"><b>224,534</b></td><td class="num">31,600</td><td class="num">192,934</td><td>~86% fake, identity-disjoint split</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="prose">
+              <p>Frames are sampled at 1 FPS and faces cropped with MTCNN. The train, validation, and test split is assigned per identity, so the same person never appears in both training and test data. This prevents the model from memorizing who it is looking at instead of learning manipulation artifacts. Class imbalance is handled with a weighted sampler on the training split only.</p>
+            </div>
+          </div>
+
+          <div class="prose" id="explainability">
+            <h2>Explainability</h2>
+            <p>Attention rollout (Abnar and Zuidema, 2020) multiplies the attention matrices of successive layers, with residual connections folded in, to estimate how much each input patch contributed to the class token. Because the explanation is derived from the transformer's own weights, it needs no gradient computation and no auxiliary model.</p>
+            <p>The heatmaps are checked in two ways. Qualitatively, they concentrate on the eyes, nose, and mouth, which is where blending boundaries appear in face swaps. Quantitatively, deletion and insertion faithfulness curves (adapted from RISE, Petsiuk et al., 2018) measure whether removing the highlighted patches first changes the prediction faster than removing patches at random. That stricter test is reported as-is on the Research page.</p>
+          </div>
+
+          <div id="custom">
+            <h2>Custom dataset fine-tuning</h2>
+            <div class="prose mb-24">
+              <p>The original models were trained on video face swaps. A custom dataset introduces a different kind of fake: 210 real phone photographs paired with 210 fully AI-generated re-renders of the same people. Zero-shot, every original checkpoint scored at chance on it. After fine-tuning each checkpoint with replay of its original training domain, all five models reach 80 to 88% accuracy on the held-out custom split while losing at most 2.3 points on the original data.</p>
+            </div>
+            <figure class="figure">
+              <img src="assets/custom_before_vs_after.png" alt="Before and after fine-tuning accuracy on the custom dataset" loading="lazy" />
+              <figcaption>Custom test accuracy before and after fine-tuning, for all five checkpoints.</figcaption>
+            </figure>
+          </div>
+
+          <div id="limitations">
+            <h2>Limitations</h2>
+            <div class="stack" style="gap:12px">
+              <div class="alert alert-warning">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 10 18H2L12 3z"/><path d="M12 10v4M12 18h.01"/></svg>
+                <span><b>In-domain numbers are not generalization claims.</b> A model trained only on Celeb-DF-v2 reaches 24.6% on FaceForensics++. The headline accuracies apply to manipulation types the model has seen.</span>
+              </div>
+              <div class="alert alert-warning">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 10 18H2L12 3z"/><path d="M12 10v4M12 18h.01"/></svg>
+                <span><b>Heatmaps are a qualitative aid.</b> Under the deletion/insertion faithfulness metric, attention-guided patch removal is only marginally different from random removal.</span>
+              </div>
+              <div class="alert alert-warning">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 10 18H2L12 3z"/><path d="M12 10v4M12 18h.01"/></svg>
+                <span><b>Real faces are misclassified more often than fakes are missed.</b> The models are conservative, with a 13 to 14% false-positive rate on real images against roughly 1% missed fakes.</span>
+              </div>
+              <div class="alert alert-info">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                <span><b>Not legal evidence.</b> Outputs are a research signal to support human review, not a forensic determination.</span>
+              </div>
+            </div>
+          </div>
+
+          <div id="stack">
+            <h2>Technology</h2>
+            <div class="grid grid-2">
+              <div class="card card-body">
+                <h3>Modeling</h3>
+                <ul class="reqs mt-16">
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span>PyTorch and <b>timm</b> for the ViT-B/16 and Xception backbones</span></li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>facenet-pytorch</b> MTCNN for face detection and cropping</span></li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span>Training on Kaggle GPUs; custom fine-tuning locally on Apple M4 (MPS)</span></li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span>Checkpoints hosted on the <b>Hugging Face Hub</b> for reproducible runs</span></li>
+                </ul>
+              </div>
+              <div class="card card-body">
+                <h3>Serving</h3>
+                <ul class="reqs mt-16">
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>FastAPI</b> inference service with a <code>/predict</code> endpoint</span></li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span>Returns label, confidence, and a base64 PNG heatmap overlay</span></li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span>Model weights loaded from the Hub at startup, CPU or CUDA</span></li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span>This static frontend, served by the same app</span></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-tight">
+      <div class="container">
+        <div class="cta-band">
+          <div><h2>See the numbers</h2><p>Full metrics, cross-dataset tables, and faithfulness curves from the final report.</p></div>
+          <a class="btn btn-primary btn-lg" href="research.html">Open research results</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer id="site-footer"></footer>
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>History · DeepGuard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="app.js"></script>
+  <script>App.Auth.require();</script>
+</head>
+<body data-page="history">
+  <header id="site-nav"></header>
+
+  <main>
+    <section class="page-header">
+      <div class="container row between">
+        <div>
+          <span class="eyebrow">History</span>
+          <h1 style="font-size:1.8rem">Your analyses</h1>
+          <p class="text-muted mb-0">Stored locally in this browser for the demo build. Nothing is uploaded to a server.</p>
+        </div>
+        <div class="row">
+          <a class="btn btn-primary" href="detect.html">New analysis</a>
+          <button class="btn btn-outline" id="btn-clear">Clear history</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-tight">
+      <div class="container">
+        <div class="stats mb-24" id="summary"></div>
+
+        <div class="card" id="empty" hidden>
+          <div class="empty-state">
+            <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+            <h3>No analyses yet</h3>
+            <p>Run your first image through the detector and it will show up here.</p>
+            <a class="btn btn-primary mt-16" href="detect.html">Analyze an image</a>
+          </div>
+        </div>
+
+        <div class="table-wrap" id="table-wrap" hidden>
+          <table class="table">
+            <thead>
+              <tr><th></th><th>File</th><th>Prediction</th><th class="num">Confidence</th><th>Type</th><th class="num">Size</th><th>Analyzed</th><th></th></tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <script>
+    (function () {
+      const { History, Util } = App;
+      const $ = (id) => document.getElementById(id);
+
+      function render() {
+        const list = History.all();
+        $("empty").hidden = list.length > 0;
+        $("table-wrap").hidden = list.length === 0;
+        $("btn-clear").disabled = list.length === 0;
+
+        const avg = list.length ? (list.reduce((s, e) => s + (e.confidence || 0), 0) / list.length).toFixed(1) + "%" : "—";
+        const last = list.length ? Util.formatDate(list[0].at) : "—";
+        const bytes = list.reduce((s, e) => s + (e.size || 0), 0);
+        $("summary").innerHTML = `
+          <div class="stat"><b>${list.length}</b><span>Images analyzed</span></div>
+          <div class="stat"><b>${avg}</b><span>Average confidence</span></div>
+          <div class="stat"><b>${Util.formatBytes(bytes)}</b><span>Total data processed</span></div>
+          <div class="stat"><b style="font-size:1.05rem; margin-top:6px">${last}</b><span>Most recent analysis</span></div>`;
+
+        $("rows").innerHTML = list.map((e) => `
+          <tr data-id="${e.id}">
+            <td style="width:60px">${e.thumb ? `<img class="thumb" src="${e.thumb}" alt="" />` : `<span class="thumb" style="display:inline-block"></span>`}</td>
+            <td><b>${Util.escape(e.fileName)}</b><div class="text-xs text-muted">${Util.escape(e.dimensions || "")}</div></td>
+            <td><code>${Util.escape(e.prediction)}</code></td>
+            <td class="num">${e.confidence != null ? e.confidence.toFixed(1) + "%" : "—"}</td>
+            <td><span class="badge badge-neutral">${Util.escape((e.type || "").replace("image/", "").toUpperCase())}</span></td>
+            <td class="num">${Util.formatBytes(e.size)}</td>
+            <td class="text-muted">${Util.formatDate(e.at)}</td>
+            <td class="num"><button class="btn btn-ghost btn-sm" data-del="${e.id}" aria-label="Delete entry">Delete</button></td>
+          </tr>`).join("");
+      }
+
+      $("rows").addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-del]");
+        if (!btn) return;
+        History.remove(btn.dataset.del);
+        render();
+        Util.toast("Entry removed");
+      });
+      $("btn-clear").addEventListener("click", () => {
+        if (!History.all().length) return;
+        if (confirm("Clear all analysis history stored in this browser?")) { History.clear(); render(); Util.toast("History cleared"); }
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>

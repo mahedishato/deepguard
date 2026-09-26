@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contact · DeepGuard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="app.js"></script>
+</head>
+<body data-page="contact">
+  <header id="site-nav"></header>
+
+  <main>
+    <section class="page-header">
+      <div class="container">
+        <span class="eyebrow">Contact</span>
+        <h1>Get in touch</h1>
+        <p class="lede">Questions about the research, the model, or collaborating on evaluation data? Send a message or check the FAQ below.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container grid grid-2" style="gap:40px; align-items:start">
+        <div class="card">
+          <div class="card-header"><h3>Send a message</h3><p>Demo form. Nothing is transmitted; the submission is acknowledged locally.</p></div>
+          <form class="card-body stack" id="contact-form" novalidate>
+            <div class="grid grid-2" style="gap:16px">
+              <div class="field"><label for="c-name">Name</label><input class="input" id="c-name" type="text" placeholder="Your name" required /></div>
+              <div class="field"><label for="c-email">Email</label><input class="input" id="c-email" type="email" placeholder="you@example.com" required /></div>
+            </div>
+            <div class="field">
+              <label for="c-topic">Topic</label>
+              <select class="select" id="c-topic">
+                <option>General question</option>
+                <option>Research collaboration</option>
+                <option>Dataset or evaluation request</option>
+                <option>Report an incorrect prediction</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="field"><label for="c-msg">Message</label><textarea class="textarea" id="c-msg" placeholder="How can we help?" required></textarea></div>
+            <div class="alert alert-success" id="c-success" hidden>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>Thanks. Your message was recorded locally for this demo.</span>
+            </div>
+            <div class="alert alert-danger" id="c-error" hidden>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+              <span>Please fill in your name, a valid email, and a message.</span>
+            </div>
+            <div><button class="btn btn-primary" type="submit" id="c-submit">Send message</button></div>
+          </form>
+        </div>
+
+        <div class="stack" style="gap:24px">
+          <div>
+            <h3 class="mb-16">Frequently asked questions</h3>
+            <div class="stack" style="gap:10px">
+              <details class="faq"><summary>Is my image stored?</summary><p>In the demo build, no. Images stay in your browser. The production API processes the upload in memory and returns the result without persisting the file.</p></details>
+              <details class="faq"><summary>Why did the detector reject my image?</summary><p>The API only accepts JPEG and PNG, and it requires at least one detectable face. Very small, heavily occluded, or profile faces can fail MTCNN detection.</p></details>
+              <details class="faq"><summary>Can I trust the confidence score?</summary><p>Treat it as a signal, not proof. In-domain accuracy is above 97%, but performance drops on manipulation methods the model has not seen. Review the Research page for the cross-dataset results.</p></details>
+              <details class="faq"><summary>What does the heatmap mean?</summary><p>It shows which image patches received the most attention on the path to the decision. Bright regions influenced the verdict more. It is a qualitative aid, not a pixel-level proof of manipulation.</p></details>
+              <details class="faq"><summary>Does it work on video?</summary><p>The models were trained on video frames, but the service currently accepts single images. Extract frames and submit them individually.</p></details>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <script>
+    (function () {
+      const $ = (id) => document.getElementById(id);
+      $("contact-form").addEventListener("submit", function (e) {
+        e.preventDefault();
+        const ok = $("c-name").value.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test($("c-email").value.trim()) && $("c-msg").value.trim();
+        $("c-error").hidden = !!ok;
+        if (!ok) return;
+        const btn = $("c-submit");
+        btn.disabled = true; btn.textContent = "Sending…";
+        setTimeout(() => {
+          $("c-success").hidden = false;
+          btn.disabled = false; btn.textContent = "Send message";
+          this.reset();
+        }, 600);
+      });
+    })();
+  </script>
+</body>
+</html>

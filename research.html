@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Research results · DeepGuard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="app.js"></script>
+</head>
+<body data-page="research">
+  <header id="site-nav"></header>
+
+  <main>
+    <section class="page-header">
+      <div class="container">
+        <span class="eyebrow">Research</span>
+        <h1>Results and evaluation</h1>
+        <p class="lede">Headline metrics from the final report. All models share one identity-disjoint manifest of 224,534 face crops from FaceForensics++ (c23) and Celeb-DF-v2, with a 38,414-image held-out test split.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container two-col">
+        <nav class="toc" aria-label="On this page">
+          <a href="#comparison">Model comparison</a>
+          <a href="#per-dataset">Per-dataset</a>
+          <a href="#cross-dataset">Cross-dataset</a>
+          <a href="#faithfulness">Faithfulness</a>
+          <a href="#custom">Custom dataset</a>
+        </nav>
+
+        <div class="stack" style="gap:56px">
+          <div id="comparison">
+            <h2>Model comparison</h2>
+            <p class="text-muted mb-24">Combined test split, n = 38,414. The frequency-fusion branch gives a small but consistent edge; all three land within a quarter of a point.</p>
+            <div class="table-wrap mb-24">
+              <table class="table">
+                <thead><tr><th>Model</th><th class="num">Accuracy</th><th class="num">Precision</th><th class="num">Recall</th><th class="num">F1</th><th class="num">ROC-AUC</th><th class="num">Params</th></tr></thead>
+                <tbody>
+                  <tr><td>ViT-B/16 (baseline)</td><td class="num">97.31%</td><td class="num">98.09%</td><td class="num"><b>98.86%</b></td><td class="num">98.47%</td><td class="num">99.31%</td><td class="num">85.80M</td></tr>
+                  <tr class="highlight"><td><b>Dual-branch ViT + FFT</b></td><td class="num"><b>97.47%</b></td><td class="num"><b>98.61%</b></td><td class="num">98.51%</td><td class="num"><b>98.56%</b></td><td class="num">99.31%</td><td class="num">86.45M</td></tr>
+                  <tr><td>Xception (CNN)</td><td class="num">97.22%</td><td class="num">98.21%</td><td class="num">98.63%</td><td class="num">98.42%</td><td class="num">99.04%</td><td class="num">20.81M</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="grid grid-2">
+              <figure class="figure"><img src="assets/advanced_baseline_vs_freqfusion.png" alt="Baseline versus FreqFusion comparison chart" loading="lazy" /><figcaption>Baseline ViT vs. dual-branch FreqFusion across metrics.</figcaption></figure>
+              <figure class="figure"><img src="assets/advanced_roc_pr_curves.png" alt="ROC and precision-recall curves for all three models" loading="lazy" /><figcaption>ROC and precision-recall curves. All three are near-saturated.</figcaption></figure>
+            </div>
+          </div>
+
+          <div id="per-dataset">
+            <h2>Per-dataset breakdown</h2>
+            <p class="text-muted mb-24">Baseline ViT, combined-manifest model evaluated separately on each dataset's test rows.</p>
+            <div class="table-wrap">
+              <table class="table">
+                <thead><tr><th>Test dataset</th><th class="num">n</th><th class="num">Accuracy</th><th class="num">Precision</th><th class="num">Recall</th><th class="num">F1</th><th class="num">ROC-AUC</th></tr></thead>
+                <tbody>
+                  <tr><td>Celeb-DF-v2</td><td class="num">14,632</td><td class="num">97.85%</td><td class="num">97.95%</td><td class="num">99.61%</td><td class="num">98.77%</td><td class="num">99.44%</td></tr>
+                  <tr><td>FaceForensics++</td><td class="num">23,782</td><td class="num">96.85%</td><td class="num">97.74%</td><td class="num">98.72%</td><td class="num">98.23%</td><td class="num">98.87%</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="cross-dataset">
+            <h2>Cross-dataset generalization</h2>
+            <p class="text-muted mb-24">Two additional ViT-B/16 models were trained on a single dataset each and evaluated on the other with zero exposure during training. This is the most consequential result in the report.</p>
+            <div class="table-wrap mb-24">
+              <table class="table">
+                <thead><tr><th>Train → Test</th><th class="num">Accuracy</th><th class="num">Precision</th><th class="num">Recall</th><th class="num">F1</th><th class="num">ROC-AUC</th><th>Gap</th></tr></thead>
+                <tbody>
+                  <tr><td>FF++ → FF++ (in-domain)</td><td class="num">97.18%</td><td class="num">98.36%</td><td class="num">98.45%</td><td class="num">98.41%</td><td class="num">99.25%</td><td>—</td></tr>
+                  <tr><td>FF++ → Celeb-DF (cross)</td><td class="num">87.08%</td><td class="num">90.17%</td><td class="num">95.53%</td><td class="num">92.77%</td><td class="num">81.46%</td><td><span class="badge badge-warning">−10.1 pts</span></td></tr>
+                  <tr><td>Celeb-DF → Celeb-DF (in-domain)</td><td class="num">98.19%</td><td class="num">99.16%</td><td class="num">98.75%</td><td class="num">98.95%</td><td class="num">99.71%</td><td>—</td></tr>
+                  <tr><td>Celeb-DF → FF++ (cross)</td><td class="num"><b>24.56%</b></td><td class="num">98.55%</td><td class="num"><b>14.91%</b></td><td class="num">25.90%</td><td class="num">73.87%</td><td><span class="badge badge-danger">−73.6 pts</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="alert alert-warning mb-24">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 10 18H2L12 3z"/><path d="M12 10v4M12 18h.01"/></svg>
+              <span>A model trained only on Celeb-DF-v2 predicts "real" for 85% of genuinely fake FaceForensics++ images. Combined-manifest accuracy is in-domain performance, not evidence of method-agnostic generalization.</span>
+            </div>
+            <figure class="figure"><img src="assets/advanced_cross_dataset_generalization.png" alt="Cross-dataset generalization chart" loading="lazy" /><figcaption>In-domain vs. cross-dataset accuracy for the two single-dataset models.</figcaption></figure>
+          </div>
+
+          <div id="faithfulness">
+            <h2>Explainability faithfulness</h2>
+            <p class="text-muted mb-24">Deletion and insertion curves following the RISE protocol, using attention-rollout importance to order patch removal. A positive gap (random minus attention AUC) means attention-guided removal collapses confidence faster than random removal. n = 200 images per model.</p>
+            <div class="table-wrap mb-24">
+              <table class="table">
+                <thead><tr><th>Model</th><th class="num">Deletion AUC ↓</th><th class="num">Random-order deletion AUC</th><th class="num">Insertion AUC ↑</th><th class="num">Faithfulness gap</th><th>Reading</th></tr></thead>
+                <tbody>
+                  <tr><td>ViT-B/16 (baseline)</td><td class="num">0.8892</td><td class="num">0.8843</td><td class="num">0.9015</td><td class="num">−0.0049</td><td><span class="badge badge-neutral">≈ random</span></td></tr>
+                  <tr><td>Dual-branch ViT</td><td class="num">0.8567</td><td class="num">0.8583</td><td class="num">0.8906</td><td class="num">+0.0016</td><td><span class="badge badge-neutral">≈ random</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="text-muted text-sm mb-24">Heatmaps concentrate visually on the eyes, nose, and mouth, but under this stricter mask-free metric they are only marginally different from random ordering. This is reported as-is rather than smoothed over.</p>
+            <figure class="figure"><img src="assets/advanced_faithfulness.png" alt="Faithfulness comparison chart" loading="lazy" /><figcaption>Attention-guided vs. random deletion/insertion AUCs.</figcaption></figure>
+          </div>
+
+          <div id="custom">
+            <h2>Custom dataset fine-tuning</h2>
+            <p class="text-muted mb-24">210 real phone photos paired with 210 AI-generated re-renders of the same people, split by identity (147 / 31 / 32 identities). Custom test n = 64. Original-domain subsets n = 3,000, sampled once so before/after deltas are exact.</p>
+            <div class="table-wrap mb-24">
+              <table class="table">
+                <thead><tr><th>Model</th><th class="num">Custom acc (before → after)</th><th class="num">Custom AUC (before → after)</th><th class="num">Original acc (before → after)</th></tr></thead>
+                <tbody>
+                  <tr><td>Baseline ViT-B/16</td><td class="num">50.0% → <b>84.4%</b></td><td class="num">0.502 → 0.898</td><td class="num">97.3% → 96.9%</td></tr>
+                  <tr><td>Dual-branch ViT</td><td class="num">46.9% → <b>79.7%</b></td><td class="num">0.495 → 0.879</td><td class="num">97.4% → 96.9%</td></tr>
+                  <tr><td>Xception</td><td class="num">45.3% → <b>84.4%</b></td><td class="num">0.465 → 0.934</td><td class="num">97.1% → 95.2%</td></tr>
+                  <tr><td>FF++-only ViT</td><td class="num">48.4% → <b>87.5%</b></td><td class="num">0.452 → 0.929</td><td class="num">97.0% → 96.1%</td></tr>
+                  <tr><td>Celeb-DF-only ViT</td><td class="num">50.0% → <b>87.5%</b></td><td class="num">0.429 → <b>0.977</b></td><td class="num">98.2% → 96.0%</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="grid grid-2">
+              <figure class="figure"><img src="assets/custom_before_vs_after.png" alt="Before vs after fine-tuning" loading="lazy" /><figcaption>Zero-shot vs. fine-tuned accuracy on the custom test split.</figcaption></figure>
+              <figure class="figure"><img src="assets/fig_generalization_matrix.png" alt="Generalization matrix after fine-tuning" loading="lazy" /><figcaption>Generalization matrix across the custom, FF++, and Celeb-DF test sets.</figcaption></figure>
+            </div>
+          </div>
+
+          <div class="card card-body">
+            <h3>Training setup</h3>
+            <div class="kv mt-16">
+              <div><span>Optimizer</span><b>AdamW, lr 3e-5, weight decay 0.05, cosine schedule</b></div>
+              <div><span>Epochs</span><b>20 (combined), 10 (single-dataset ablations)</b></div>
+              <div><span>Input</span><b>224 × 224, ImageNet normalization, flip + color jitter</b></div>
+              <div><span>Balancing</span><b>Weighted random sampler on the training split</b></div>
+              <div><span>Checkpoint selection</span><b>Best validation accuracy</b></div>
+              <div><span>Hardware</span><b>Kaggle T4/P100; Apple M4 for custom fine-tuning</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer id="site-footer"></footer>
+</body>
+</html>

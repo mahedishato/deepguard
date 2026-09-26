@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DeepGuard · Explainable Deepfake Detection</title>
+  <meta name="description" content="Upload a face image and get a real/fake verdict with an attention heatmap. Vision Transformer deepfake detection with frequency-domain fusion." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="app.js"></script>
+</head>
+<body data-page="index">
+  <header id="site-nav"></header>
+
+  <main>
+    <!-- Hero -->
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <span class="badge badge-primary mb-16"><span class="dot"></span> Research prototype &middot; ViT-B/16 + frequency fusion</span>
+          <h1>Detect manipulated faces, and see why the model decided.</h1>
+          <p class="lede">Upload a face photo and get a real or fake verdict with a confidence score and an attention-rollout heatmap that highlights the regions behind the decision.</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary btn-lg" href="detect.html">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5M12 3v12"/></svg>
+              Analyze an image
+            </a>
+            <a class="btn btn-outline btn-lg" href="about.html">How it works</a>
+          </div>
+          <p class="hero-note">JPEG or PNG · one clear face per image · no images are stored in the demo build.</p>
+        </div>
+
+        <div class="hero-visual">
+          <div class="mock-panel" aria-hidden="true">
+            <div class="mock-bar"><i></i><i></i><i></i><span>POST /predict · 200 OK · 0.41 s</span></div>
+            <div class="mock-body">
+              <div class="mock-face"><div class="mock-grid"></div><div class="heat"></div></div>
+              <div class="mock-meta">
+                <div><div class="k">Verdict</div><div class="v" style="color:var(--destructive)">Likely fake</div></div>
+                <div><div class="k">Confidence</div><div class="v">96.8%</div><div class="meter danger mt-8"><i style="width:96.8%"></i></div></div>
+                <div><div class="k">Explanation</div><div class="text-sm text-muted">Attention concentrated on eyes, nose bridge and mouth boundary.</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stats -->
+    <section class="section-tight">
+      <div class="container">
+        <div class="stats">
+          <div class="stat"><b>97.47%</b><span>Test accuracy, dual-branch ViT (combined FF++ / Celeb-DF-v2)</span></div>
+          <div class="stat"><b>224,534</b><span>Face crops in the identity-disjoint evaluation manifest</span></div>
+          <div class="stat"><b>5</b><span>Trained models, all fine-tuned on a custom AI-portrait dataset</span></div>
+          <div class="stat"><b>99.31%</b><span>ROC-AUC on the held-out test split</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- How it works -->
+    <section class="section" id="how-it-works">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">How it works</span>
+          <h2>Three steps from upload to an explained verdict</h2>
+          <p class="text-muted">The same pipeline the research notebooks use, served through a FastAPI inference endpoint.</p>
+        </div>
+        <div class="steps">
+          <div class="step">
+            <span class="step-num">1</span>
+            <h3>Face detection and crop</h3>
+            <p>MTCNN locates the largest face, crops it with a 20 px margin and resizes it to 224 × 224, exactly as in training. Backgrounds and file metadata never reach the classifier.</p>
+          </div>
+          <div class="step">
+            <span class="step-num">2</span>
+            <h3>Classification</h3>
+            <p>A ViT-B/16 backbone splits the crop into 196 patches and runs 12 self-attention layers. A frequency branch over the FFT spectrum catches periodic generator artifacts the spatial branch can miss.</p>
+          </div>
+          <div class="step">
+            <span class="step-num">3</span>
+            <h3>Attention rollout</h3>
+            <p>Attention weights are multiplied through every layer to trace the decision back to image patches, producing a heatmap you can check against the face rather than a bare score.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section class="section section-muted">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">Why this detector</span>
+          <h2>Designed to be inspected, not just trusted</h2>
+        </div>
+        <div class="grid grid-4">
+          <div class="card card-hover feature">
+            <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div>
+            <h3>Architecture-native explanations</h3>
+            <p>Heatmaps come from the transformer's own attention weights, not a post-hoc approximation bolted onto a CNN.</p>
+          </div>
+          <div class="card card-hover feature">
+            <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div>
+            <h3>Frequency-aware</h3>
+            <p>A lightweight convolutional branch over the log-magnitude FFT spectrum is fused with the ViT embedding before classification.</p>
+          </div>
+          <div class="card card-hover feature">
+            <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
+            <h3>Cross-dataset tested</h3>
+            <p>Train-on-one, test-on-the-other ablations quantify how much accuracy survives an unseen manipulation method.</p>
+          </div>
+          <div class="card card-hover feature">
+            <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10M18 20V4M6 20v-4"/></svg></div>
+            <h3>Custom-data fine-tuned</h3>
+            <p>All five checkpoints were adapted to fully AI-generated portraits with replay training, reaching 80 to 88% on that new fake type.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Model comparison -->
+    <section class="section">
+      <div class="container">
+        <div class="grid grid-2" style="align-items:center; gap:48px">
+          <div>
+            <span class="eyebrow">Benchmarks</span>
+            <h2>Three architectures, one protocol</h2>
+            <p class="text-muted">Every model is trained and evaluated on the same identity-disjoint manifest drawn from FaceForensics++ (c23) and Celeb-DF-v2, so the comparison is like for like.</p>
+            <a class="btn btn-outline mt-16" href="research.html">See full results</a>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>Model</th><th class="num">Accuracy</th><th class="num">F1</th><th class="num">ROC-AUC</th></tr></thead>
+              <tbody>
+                <tr><td>ViT-B/16 (baseline)</td><td class="num">97.31%</td><td class="num">98.47%</td><td class="num">99.31%</td></tr>
+                <tr class="highlight"><td><b>Dual-branch ViT + FFT</b> <span class="badge badge-primary" style="margin-left:6px">Ours</span></td><td class="num"><b>97.47%</b></td><td class="num"><b>98.56%</b></td><td class="num"><b>99.31%</b></td></tr>
+                <tr><td>Xception (CNN reference)</td><td class="num">97.22%</td><td class="num">98.42%</td><td class="num">99.04%</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="section-tight">
+      <div class="container">
+        <div class="cta-band">
+          <div>
+            <h2>Ready to check an image?</h2>
+            <p>Sign in with any credentials to try the demo. Predictions are simulated until the inference API is attached.</p>
+          </div>
+          <a class="btn btn-primary btn-lg" href="detect.html">Open the detector</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer id="site-footer"></footer>
+</body>
+</html>

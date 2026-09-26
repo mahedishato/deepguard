@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Detect · DeepGuard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="app.js"></script>
+  <script>App.Auth.require();</script>
+</head>
+<body data-page="detect">
+  <header id="site-nav"></header>
+
+  <main>
+    <section class="page-header">
+      <div class="container row between">
+        <div>
+          <span class="eyebrow">Detector</span>
+          <h1 style="font-size:1.8rem">Analyze a face image</h1>
+          <p class="text-muted mb-0">Upload a JPEG or PNG containing one clear face. The result includes the prediction, a confidence estimate and an attention map.</p>
+        </div>
+        <span class="badge badge-warning"><span class="dot"></span> Demo mode · simulated prediction</span>
+      </div>
+    </section>
+
+    <section class="section-tight">
+      <div class="container detect-grid">
+        <!-- Left: upload -->
+        <div class="stack">
+          <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Upload an image">
+            <div class="dz-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5M12 3v12"/></svg>
+            </div>
+            <p>Drop an image here, or click to browse</p>
+            <small>JPEG or PNG · up to 10 MB</small>
+            <input type="file" id="file-input" accept="image/jpeg,image/png" hidden />
+          </div>
+          <div class="alert alert-danger" id="upload-error" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+            <span id="upload-error-text"></span>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h3>Input requirements</h3><p>Matches the API's validation and the training preprocessing.</p></div>
+            <div class="card-body">
+              <ul class="reqs">
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>Format:</b> JPEG or PNG. Other types are rejected with HTTP 400.</span></li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>Content:</b> at least one visible face. The largest face is cropped with MTCNN; images without a face return HTTP 422.</span></li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>Quality:</b> frontal or near-frontal faces of roughly 224 px or larger work best.</span></li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>Scope:</b> trained on face-swap video frames and AI-generated portraits. Non-face manipulations are out of scope.</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h3>Model</h3></div>
+            <div class="card-body stack" style="gap:10px; font-size:0.88rem">
+              <div class="row between"><span class="text-muted">Checkpoint</span><code>model_custom.pt</code></div>
+              <div class="row between"><span class="text-muted">Architecture</span><b>ViT-B/16, 85.8M params</b></div>
+              <div class="row between"><span class="text-muted">Input</span><b>224 × 224 RGB face crop</b></div>
+              <div class="row between"><span class="text-muted">Explainer</span><b>Attention rollout</b></div>
+              <div class="row between"><span class="text-muted">Status</span><span class="badge badge-neutral">Not connected</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: stage -->
+        <div class="card" id="stage">
+          <!-- Empty state -->
+          <div class="empty-state" id="state-empty">
+            <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg></div>
+            <h3>No image selected</h3>
+            <p class="mb-0">Your preview, prediction and attention map will appear here.</p>
+          </div>
+
+          <!-- Analyzing state -->
+          <div class="card-body" id="state-analyzing" hidden>
+            <div class="row between mb-16">
+              <div><h3 class="mb-0">Analyzing</h3><p class="text-sm text-muted mb-0" id="analyzing-name"></p></div>
+              <span class="badge badge-primary"><span class="dot"></span> Running</span>
+            </div>
+            <div class="preview-wrap">
+              <img id="preview-analyzing" alt="Uploaded image preview" />
+              <div class="scan-grid"></div>
+              <div class="scan-line"></div>
+            </div>
+            <div class="progress-steps" id="progress-steps">
+              <div class="pstep" data-step="0"><span class="ind"></span><span>Validating file type and size</span></div>
+              <div class="pstep" data-step="1"><span class="ind"></span><span>Detecting and cropping the face (MTCNN)</span></div>
+              <div class="pstep" data-step="2"><span class="ind"></span><span>Running Vision Transformer inference</span></div>
+              <div class="pstep" data-step="3"><span class="ind"></span><span>Computing attention rollout heatmap</span></div>
+            </div>
+          </div>
+
+          <!-- Result state -->
+          <div id="state-result" hidden>
+            <div class="card-body stack" style="gap:22px">
+              <div class="result-head">
+                <div>
+                  <div class="text-xs text-muted" style="font-weight:600; text-transform:uppercase; letter-spacing:0.06em">Prediction</div>
+                  <div class="prediction" id="prediction"></div>
+                  <p class="text-sm text-muted mt-8 mb-0">Demo output: derived from the uploaded file name. The connected model will return <code>real</code> or <code>fake</code> here.</p>
+                </div>
+                <span class="badge badge-success" id="result-status"><span class="dot"></span> Completed</span>
+              </div>
+
+              <div>
+                <div class="row between mb-8">
+                  <span class="text-sm" style="font-weight:600">Confidence</span>
+                  <span class="text-sm" id="confidence-text"></span>
+                </div>
+                <div class="meter"><i id="confidence-bar" style="width:0"></i></div>
+                <p class="text-xs text-muted mt-8 mb-0">Simulated score for layout purposes. It is deterministic per file name so repeated uploads match.</p>
+              </div>
+
+              <div class="result-figs">
+                <div class="fig">
+                  <div class="rel"><img id="preview-result" alt="Uploaded image" /></div>
+                  <div class="fig-cap"><span>Input image</span><span class="badge badge-neutral">Original</span></div>
+                </div>
+                <div class="fig">
+                  <div class="rel"><img id="heatmap-result" alt="Attention rollout heatmap overlay" /><div class="heat-overlay"></div></div>
+                  <div class="fig-cap"><span>Attention rollout</span><span class="badge badge-warning">Placeholder</span></div>
+                </div>
+              </div>
+
+              <div class="kv" id="file-meta"></div>
+
+              <div class="result-actions">
+                <button class="btn btn-primary" id="btn-again">Analyze another image</button>
+                <a class="btn btn-outline" href="history.html">View history</a>
+                <button class="btn btn-ghost" id="btn-copy">Copy result as JSON</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <script>
+    (function () {
+      const { History, Util } = App;
+      const $ = (id) => document.getElementById(id);
+      const MAX_BYTES = 10 * 1024 * 1024;
+      const ALLOWED = ["image/jpeg", "image/png"];
+
+      const dropzone = $("dropzone");
+      const fileInput = $("file-input");
+      const states = { empty: $("state-empty"), analyzing: $("state-analyzing"), result: $("state-result") };
+      let objectUrl = null;
+      let lastResult = null;
+      let timers = [];
+
+      function show(name) {
+        Object.entries(states).forEach(([k, el]) => { el.hidden = k !== name; });
+        if (name !== "empty") states[name].classList.add("fade-in");
+      }
+
+      function showError(msg) {
+        $("upload-error-text").textContent = msg;
+        $("upload-error").hidden = false;
+      }
+      function clearError() { $("upload-error").hidden = true; }
+
+      /* ---- Upload wiring ---- */
+      dropzone.addEventListener("click", () => fileInput.click());
+      dropzone.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInput.click(); } });
+      ["dragenter", "dragover"].forEach((ev) => dropzone.addEventListener(ev, (e) => { e.preventDefault(); dropzone.classList.add("dragover"); }));
+      ["dragleave", "drop"].forEach((ev) => dropzone.addEventListener(ev, (e) => { e.preventDefault(); dropzone.classList.remove("dragover"); }));
+      dropzone.addEventListener("drop", (e) => { if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); });
+      fileInput.addEventListener("change", () => { if (fileInput.files.length) handleFile(fileInput.files[0]); });
+      document.addEventListener("paste", (e) => {
+        const item = [...(e.clipboardData?.items || [])].find((i) => i.type.startsWith("image/"));
+        if (item) handleFile(item.getAsFile());
+      });
+
+      function validate(file) {
+        if (!ALLOWED.includes(file.type)) return "Unsupported file type. Upload a JPEG or PNG image.";
+        if (file.size > MAX_BYTES) return "File is larger than 10 MB. Please upload a smaller image.";
+        return null;
+      }
+
+      function handleFile(file) {
+        clearError();
+        const err = validate(file);
+        if (err) { showError(err); return; }
+
+        timers.forEach(clearTimeout); timers = [];
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+        objectUrl = URL.createObjectURL(file);
+
+        $("analyzing-name").textContent = file.name;
+        $("preview-analyzing").src = objectUrl;
+        document.querySelectorAll(".pstep").forEach((s) => { s.className = "pstep"; s.querySelector(".ind").innerHTML = ""; });
+        show("analyzing");
+
+        // Simulated pipeline stages, then a mock result.
+        const stepDelays = [200, 650, 1400, 1950];
+        stepDelays.forEach((ms, i) => {
+          timers.push(setTimeout(() => markStep(i, "active"), ms));
+          timers.push(setTimeout(() => markStep(i, "done"), stepDelays[i + 1] ? stepDelays[i + 1] - 20 : ms + 550));
+        });
+        timers.push(setTimeout(() => finish(file), stepDelays[3] + 620));
+      }
+
+      function markStep(i, state) {
+        const el = document.querySelector(`.pstep[data-step="${i}"]`);
+        if (!el) return;
+        el.className = "pstep " + state;
+        el.querySelector(".ind").innerHTML = state === "done"
+          ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>'
+          : "";
+      }
+
+      function finish(file) {
+        const prediction = Util.stripExtension(file.name);      // e.g. cat_image.jpg -> cat_image
+        const confidence = Util.hashScore(file.name, 78, 99) + Util.hashScore(file.name + "f", 0, 9) / 10;
+        const img = $("preview-analyzing");
+        const dims = img.naturalWidth ? `${img.naturalWidth} × ${img.naturalHeight} px` : "—";
+
+        $("prediction").textContent = prediction;
+        $("confidence-text").textContent = confidence.toFixed(1) + "%";
+        $("preview-result").src = objectUrl;
+        $("heatmap-result").src = objectUrl;
+        $("file-meta").innerHTML = [
+          ["File name", file.name],
+          ["Type", file.type],
+          ["Size", Util.formatBytes(file.size)],
+          ["Dimensions", dims],
+          ["Analyzed", Util.formatDate(Date.now())],
+          ["Latency", "2.6 s (simulated)"],
+        ].map(([k, v]) => `<div><span>${k}</span><b>${Util.escape(v)}</b></div>`).join("");
+
+        show("result");
+        requestAnimationFrame(() => requestAnimationFrame(() => { $("confidence-bar").style.width = confidence + "%"; }));
+
+        lastResult = {
+          id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+          fileName: file.name, prediction, confidence: Number(confidence.toFixed(1)),
+          type: file.type, size: file.size, dimensions: dims, at: Date.now(),
+        };
+        makeThumb(objectUrl).then((thumb) => { History.add({ ...lastResult, thumb }); });
+      }
+
+      /* Small JPEG thumbnail for the history table (kept under localStorage limits). */
+      function makeThumb(src) {
+        return new Promise((resolve) => {
+          const im = new Image();
+          im.onload = () => {
+            try {
+              const c = document.createElement("canvas");
+              const s = 96, r = Math.max(s / im.width, s / im.height);
+              c.width = s; c.height = s;
+              const ctx = c.getContext("2d");
+              const w = im.width * r, h = im.height * r;
+              ctx.drawImage(im, (s - w) / 2, (s - h) / 2, w, h);
+              resolve(c.toDataURL("image/jpeg", 0.7));
+            } catch { resolve(null); }
+          };
+          im.onerror = () => resolve(null);
+          im.src = src;
+        });
+      }
+
+      $("btn-again").addEventListener("click", () => { fileInput.value = ""; show("empty"); dropzone.focus(); });
+      $("btn-copy").addEventListener("click", async () => {
+        if (!lastResult) return;
+        const { thumb, ...payload } = lastResult;
+        try { await navigator.clipboard.writeText(JSON.stringify(payload, null, 2)); Util.toast("Result copied to clipboard"); }
+        catch { Util.toast("Clipboard access was blocked"); }
+      });
+    })();
+  </script>
+</body>
+</html>
